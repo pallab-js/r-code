@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #f2f1ed;
+  --color-text: #26251e;
+  --color-surface: #e6e5e0;
+  --color-surface-100: #f7f7f4;
+  --color-surface-200: #f2f1ed;
+  --color-surface-300: #ebeae5;
+  --color-surface-400: #e6e5e0;
+  --color-surface-500: #e1e0db;
+  --color-border: rgba(38, 37, 30, 0.1);
+  --color-border-strong: rgba(38, 37, 30, 0.55);
+  --color-accent: #f54e00;
+  --color-error: #cf2d56;
+  --color-success: #1f8a65;
+  --color-muted: rgba(38, 37, 30, 0.55);
+  --color-gold: #c08532;
+  --color-thinking: #dfa88f;
+  --color-grep: #9fc9a2;
+  --color-read: #9fbbe0;
+  --color-edit: #c0a8dd;
+}
+
+[data-theme="dark"] {
+  --color-bg: #1a1a1a;
+  --color-text: #e8e8e8;
+  --color-surface: #252525;
+  --color-surface-100: #1f1f1f;
+  --color-surface-200: #252525;
+  --color-surface-300: #2d2d2d;
+  --color-surface-400: #363636;
+  --color-surface-500: #404040;
+  --color-border: rgba(232, 232, 232, 0.1);
+  --color-border-strong: rgba(232, 232, 232, 0.25);
+  --color-accent: #ff6b2b;
+  --color-error: #ff4d6d;
+  --color-success: #2dbf8a;
+  --color-muted: rgba(232, 232, 232, 0.55);
+  --color-gold: #d4964a;
+  --color-thinking: #e8b89e;
+  --color-grep: #8dbf8a;
+  --color-read: #8eb8e8;
+  --color-edit: #b88de8;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+::selection {
+  background-color: rgba(245, 78, 0, 0.2);
+}
+
+/* Surface colors for Tailwind */
+.bg-surface-100 { background-color: var(--color-surface-100); }
+.bg-surface-200 { background-color: var(--color-surface-200); }
+.bg-surface-300 { background-color: var(--color-surface-300); }
+.bg-surface-400 { background-color: var(--color-surface-400); }
+.bg-surface-500 { background-color: var(--color-surface-500); }
+
+.text-cursor-dark { color: var(--color-text); }
+.text-cursor-orange { color: var(--color-accent); }
+.text-cursor-error { color: var(--color-error); }
+.text-cursor-success { color: var(--color-success); }
+.text-cursor-gold { color: var(--color-gold); }
+
+.text-timeline-thinking { color: var(--color-thinking); }
+.text-timeline-grep { color: var(--color-grep); }
+.text-timeline-read { color: var(--color-read); }
+.text-timeline-edit { color: var(--color-edit); }
+
+.bg-timeline-thinking { background-color: var(--color-thinking); }
+.bg-timeline-grep { background-color: var(--color-grep); }
+.bg-timeline-read { background-color: var(--color-read); }
+.bg-timeline-edit { background-color: var(--color-edit); }
+
+.border-border-primary { border-color: var(--color-border); }
+.border-border-strong { border-color: var(--color-border-strong); }
+
+/* CodeMirror Editor */
+.cm-editor {
+  height: 100%;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background-color: var(--color-bg) !important;
+}
+
+.cm-editor .cm-scroller {
+  overflow: auto;
+  font-family: inherit;
+}
+
+.cm-editor .cm-content {
+  padding: 8px 0;
+  color: var(--color-text);
+}
+
+.cm-editor .cm-gutters {
+  background-color: var(--color-surface) !important;
+  border-right: 1px solid var(--color-border);
+  color: var(--color-muted);
+}
+
+.cm-editor .cm-activeLineGutter {
+  background-color: rgba(245, 78, 0, 0.1) !important;
+}
+
+.cm-editor .cm-activeLine {
+  background-color: rgba(245, 78, 0, 0.05) !important;
+}
+
+.cm-editor .cm-cursor {
+  border-left-color: var(--color-text) !important;
+}
+
+.cm-editor .cm-selectionBackground,
+.cm-editor .cm-content ::selection {
+  background-color: rgba(245, 78, 0, 0.2) !important;
+}
+
+.cm-editor.cm-focused .cm-selectionBackground {
+  background-color: rgba(245, 78, 0, 0.2) !important;
+}
+
+.cm-editor .cm-line {
+  padding: 0 8px;
+}
+
+.cm-editor .cm-matchingBracket {
+  background-color: rgba(245, 78, 0, 0.3);
+  color: inherit !important;
+}
+
+.cm-editor .cm-foldPlaceholder {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+}
+
+.cm-editor .cm-searchMatch {
+  background-color: rgba(159, 201, 162, 0.3);
+}
+
+.cm-editor .cm-searchMatch.cm-searchMatch-selected {
+  background-color: rgba(159, 201, 162, 0.5);
+}
+
+/* Syntax highlighting - Light theme */
+.syntax-highlight .tok-keyword { color: #f54e00; }
+.syntax-highlight .tok-string { color: #1f8a65; }
+.syntax-highlight .tok-number { color: #c08532; }
+.syntax-highlight .tok-comment { color: rgba(38, 37, 30, 0.55); font-style: italic; }
+.syntax-highlight .tok-type { color: #9fbbe0; }
+.syntax-highlight .tok-function { color: #c0a8dd; }
+.syntax-highlight .tok-variableName { color: #26251e; }
+.syntax-highlight .tok-propertyName { color: #dfa88f; }
+
+/* Syntax highlighting - Dark theme */
+[data-theme="dark"] .syntax-highlight .tok-keyword { color: #ff6b2b; }
+[data-theme="dark"] .syntax-highlight .tok-string { color: #2dbf8a; }
+[data-theme="dark"] .syntax-highlight .tok-number { color: #d4964a; }
+[data-theme="dark"] .syntax-highlight .tok-comment { color: rgba(232, 232, 232, 0.55); font-style: italic; }
+[data-theme="dark"] .syntax-highlight .tok-type { color: #8eb8e8; }
+[data-theme="dark"] .syntax-highlight .tok-function { color: #b88de8; }
+[data-theme="dark"] .syntax-highlight .tok-variableName { color: #e8e8e8; }
+[data-theme="dark"] .syntax-highlight .tok-propertyName { color: #e8b89e; }
+
+/* Scrollbars */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+/* Transitions */
+button, a, input, select, textarea {
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+/* Focus states */
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Button hover */
+button:hover {
+  color: var(--color-error);
+}

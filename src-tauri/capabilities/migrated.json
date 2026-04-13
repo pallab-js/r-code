@@ -1,0 +1,6 @@
+{
+  "identifier": "migrated",
+  "description": "Migrated capabilities",
+  "windows": ["main"],
+  "permissions": []
+}
