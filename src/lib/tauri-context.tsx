@@ -68,14 +68,20 @@ export function TauriProvider({ children }: TauriProviderProps) {
     isLoading: false,
   })
 
+  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__
+
   const invoke = async (cmd: string, args?: Record<string, any>) => {
-    if (typeof window !== 'undefined' && (window as any).__TAURI__) {
-      return await (window as any).__TAURI__.core.invoke(cmd, args)
+    if (!isTauri) {
+      throw new Error('Tauri not available')
     }
-    throw new Error('Tauri not available')
+    return await (window as any).__TAURI__.core.invoke(cmd, args)
   }
 
   const openFile = useCallback(async () => {
+    if (!isTauri) {
+      console.warn('Tauri not available - use dev server for file operations')
+      return
+    }
     try {
       setState(prev => ({ ...prev, isLoading: true }))
       const path = await invoke('open_file_dialog') as string | null
@@ -105,6 +111,10 @@ export function TauriProvider({ children }: TauriProviderProps) {
   }, [])
 
   const saveFile = useCallback(async (content?: string) => {
+    if (!isTauri) {
+      console.warn('Tauri not available - use dev server for file operations')
+      return
+    }
     const file = state.currentFile
     if (!file) return
 
@@ -127,6 +137,10 @@ export function TauriProvider({ children }: TauriProviderProps) {
   }, [state.currentFile])
 
   const saveFileAs = useCallback(async (content?: string) => {
+    if (!isTauri) {
+      console.warn('Tauri not available - use dev server for file operations')
+      return
+    }
     const file = state.currentFile
     if (!file) return
 
@@ -196,6 +210,9 @@ export function TauriProvider({ children }: TauriProviderProps) {
   }, [state.currentFile])
 
   const readFile = useCallback(async (path: string): Promise<string> => {
+    if (!isTauri) {
+      throw new Error('Tauri not available - use dev server for file operations')
+    }
     return await invoke('read_file', { path }) as string
   }, [])
 
