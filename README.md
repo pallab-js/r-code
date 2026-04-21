@@ -225,7 +225,7 @@ MIT License - See [LICENSE](LICENSE)
 
 ## Acknowledgments
 
-- [Cursor](https://cursor.sh) - Design inspiration
+- [Supabase](https://supabase.com) - Design inspiration
 - [Tauri](https://tauri.app) - Desktop framework
 - [CodeMirror](https://codemirror.net) - Text editor
 - [syntect](https://github.com/trishume/syntect) - Rust syntax highlighting
