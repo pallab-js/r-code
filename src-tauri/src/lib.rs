@@ -13,9 +13,11 @@ use search::{search_in_directory as do_search, replace_in_files as do_replace, S
 use log::info;
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
+use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 use tauri::Emitter;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone, Serialize)]
 pub struct FileChangeEvent {
@@ -25,42 +27,141 @@ pub struct FileChangeEvent {
 
 const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024;
 
-fn validate_path(path: &str) -> Result<(), String> {
-    let normalized = std::path::Path::new(path);
-    if normalized.components().any(|c| std::path::Component::ParentDir == c) {
-        return Err("Path traversal not allowed".to_string());
+const BLOCKED_SYSTEM_PATHS: &[&str] = &[
+    "/etc", "/proc", "/sys", "/boot", "/root", "/var/run", "/var/cache",
+    "/usr/bin", "/usr/sbin", "/usr/lib",
+    "C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)",
+    "C:\\",
+];
+
+fn get_sandbox_root() -> PathBuf {
+    dirs::home_dir()
+        .or_else(|| dirs::config_dir())
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn validate_and_sandbox_path(user_path: &str) -> Result<PathBuf, String> {
+    let sandbox_root = get_sandbox_root();
+    let canonicalized_root = sandbox_root.canonicalize()
+        .map_err(|e| format!("Failed to get sandbox root: {}", e))?;
+
+    let resolved = sandbox_root.join(user_path).canonicalize()
+        .map_err(|e| format!("Invalid path: {}", e))?;
+
+    if !resolved.starts_with(&canonicalized_root) {
+        return Err(format!(
+            "Path '{}' escapes sandbox (allowed: {:?})",
+            user_path, canonicalized_root
+        ));
     }
+
+    let path_str = resolved.to_string_lossy().to_lowercase();
+    for blocked in BLOCKED_SYSTEM_PATHS {
+        if path_str.starts_with(&blocked.to_lowercase()) {
+            return Err("Access to system directories is restricted".to_string());
+        }
+    }
+
+    Ok(resolved)
+}
+
+fn validate_path(path: &str) -> Result<PathBuf, String> {
     if path.contains("..") {
         return Err("Path traversal not allowed".to_string());
     }
-    Ok(())
+    validate_and_sandbox_path(path)
 }
 
+#[derive(Serialize)]
+#[serde(untagged)]
+pub enum ReadFileResponse {
+    Full { content: String },
+    Chunked { content: String, offset: u64, total: u64, done: bool },
+}
+
+const CHUNK_SIZE: u64 = 1024 * 1024;
+
 #[tauri::command]
-async fn read_file(path: String) -> Result<String, String> {
+async fn read_file(path: String, offset: Option<u64>, chunk_size: Option<u64>) -> Result<ReadFileResponse, String> {
+    use tokio::fs::File;
+    use tokio::io::{AsyncReadExt, AsyncSeekExt};
+
     info!("Reading file: {}", path);
-    validate_path(&path)?;
-    let metadata = std::fs::metadata(&path)
+    let validated = validate_path(&path)?;
+    let metadata = tokio::fs::metadata(&validated)
+        .await
         .map_err(|e| format!("Failed to read file metadata: {}", e))?;
-    if metadata.len() > MAX_FILE_SIZE {
-        return Err(format!("File too large (max {} bytes)", MAX_FILE_SIZE));
+    
+    if metadata.len() > MAX_FILE_SIZE && chunk_size.is_none() {
+        return Err(format!("File too large (max {} bytes). Use chunked read.", MAX_FILE_SIZE));
     }
     if !metadata.is_file() {
         return Err("Path is not a file".to_string());
     }
-    std::fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read file: {}", e))
+
+    let file_size = metadata.len();
+
+    if let Some(chunk) = chunk_size {
+        let start = offset.unwrap_or(0);
+        let size = chunk.min(file_size.saturating_sub(start));
+        
+        let mut file = File::open(&validated)
+            .await
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+        
+        file.seek(tokio::io::SeekFrom::Start(start))
+            .await
+            .map_err(|e| format!("Failed to seek: {}", e))?;
+        
+        let mut buffer = vec![0u8; size as usize];
+        let bytes_read = file.read(&mut buffer)
+            .await
+            .map_err(|e| format!("Failed to read: {}", e))?;
+        
+        buffer.truncate(bytes_read);
+        let content = String::from_utf8_lossy(&buffer).to_string();
+        
+        return Ok(ReadFileResponse::Chunked {
+            content,
+            offset: start,
+            total: file_size,
+            done: start + bytes_read as u64 >= file_size,
+        });
+    }
+
+    let content = tokio::fs::read_to_string(&validated)
+        .await
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+
+    Ok(ReadFileResponse::Full { content })
 }
 
 #[tauri::command]
-async fn write_file(path: String, content: String) -> Result<(), String> {
+async fn write_file(path: String, content: String, append: Option<bool>) -> Result<(), String> {
     info!("Writing file: {}", path);
-    validate_path(&path)?;
+    let validated = validate_path(&path)?;
     if content.len() as u64 > MAX_FILE_SIZE {
         return Err(format!("Content too large (max {} bytes)", MAX_FILE_SIZE));
     }
-    std::fs::write(&path, content)
-        .map_err(|e| format!("Failed to write file: {}", e))
+
+    use tokio::io::AsyncWriteExt;
+
+    if append.unwrap_or(false) {
+        let mut file = tokio::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&validated)
+            .await
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+        file.write_all(content.as_bytes())
+            .await
+            .map_err(|e| format!("Failed to write: {}", e))?;
+    } else {
+        tokio::fs::write(&validated, content)
+            .await
+            .map_err(|e| format!("Failed to write file: {}", e))?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -90,24 +191,36 @@ async fn save_file_dialog(default_name: String) -> Result<Option<String>, String
     Ok(None)
 }
 
-const ALLOWED_COMMANDS: &[&str] = &[
-    "ls", "cat", "echo", "pwd", "cd", "git", "npm", "node", "python", 
-    "python3", "cargo", "rustc", "make", "grep", "find", "head", "tail",
-    "wc", "sort", "uniq", "cut", "tr", "sed", "awk", "curl", "wget",
+const ALLOWED_EXECUTABLES: &[&str] = &[
+    "ls", "cat", "echo", "pwd", "git", "npm", "node", "python", 
+    "python3", "cargo", "grep", "head", "tail", "wc", "sort", "uniq",
+    "cut", "tr", "sed", "awk", "curl", "wget", "find",
+];
+
+const DANGEROUS_ARGS: &[&str] = &[
+    "-rf", "--force", "-rf/", "--force-recursive",
+    "-f --", "--recursive", "-r", "--remove",
 ];
 
 const BLOCKED_PATTERNS: &[&str] = &[
     "rm -rf /", "rm -rf ~", "mkfs", "dd if=", ":(){:|:&};:",
-    "chmod -R 777 /", ">", "/dev/sd", "mv /*", 
+    "chmod -R 777 /", "/dev/sd", "mv /*", 
 ];
 
-fn is_command_allowed(cmd: &str) -> bool {
-    let first_word = cmd.split_whitespace().next().unwrap_or("");
-    ALLOWED_COMMANDS.contains(&first_word)
+fn parse_command(input: &str) -> Result<Vec<String>, String> {
+    shlex::split(input).ok_or_else(|| "Failed to parse command".to_string())
 }
 
-fn contains_blocked_pattern(cmd: &str) -> bool {
-    let lower = cmd.to_lowercase();
+fn is_executable_allowed(executable: &str) -> bool {
+    ALLOWED_EXECUTABLES.contains(&executable)
+}
+
+fn contains_dangerous_args(args: &[String]) -> bool {
+    args.iter().any(|a| DANGEROUS_ARGS.contains(&a.as_str()))
+}
+
+fn contains_blocked_pattern(input: &str) -> bool {
+    let lower = input.to_lowercase();
     BLOCKED_PATTERNS.iter().any(|p| lower.contains(&p.to_lowercase()))
 }
 
@@ -117,24 +230,32 @@ async fn execute_command(command: String) -> Result<String, String> {
     if contains_blocked_pattern(&command) {
         return Err("Command blocked for security reasons".to_string());
     }
-    if !is_command_allowed(&command) {
+    let parts = parse_command(&command)?;
+    if parts.is_empty() {
+        return Err("Empty command".to_string());
+    }
+    let executable = &parts[0];
+    let args: Vec<&str> = parts[1..].iter().map(|s| s.as_str()).collect();
+    if !is_executable_allowed(executable) {
         return Err(format!(
-            "Command '{}' is not allowed. Allowed commands: {}",
-            command.split_whitespace().next().unwrap_or(""),
-            ALLOWED_COMMANDS.join(", ")
+            "Executable '{}' not allowed. Allowed: {}",
+            executable,
+            ALLOWED_EXECUTABLES.join(", ")
         ));
     }
-    let output = std::process::Command::new("sh")
-        .arg("-c")
-        .arg(&command)
+    if contains_dangerous_args(&parts) {
+        return Err("Command contains dangerous arguments".to_string());
+    }
+    let output = std::process::Command::new(executable)
+        .args(&args)
         .output()
-        .map_err(|e| format!("Command failed: {}", e))?;
+        .map_err(|e| format!("Execution failed: {}", e))?;
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    if !stderr.is_empty() {
-        Ok(format!("{}\n{}", stdout, stderr))
-    } else {
+    if output.status.success() {
         Ok(stdout)
+    } else {
+        Err(format!("Command failed:\n{}\n{}", stdout, stderr))
     }
 }
 
@@ -326,7 +447,9 @@ async fn watch_file(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "r_code=info,tauri=warn".into()))
+        .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr).json())
         .init();
     info!("Starting R-Code application");
     tauri::Builder::default()

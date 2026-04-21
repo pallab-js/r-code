@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Editor from '@/components/Editor/Editor'
+import EditorLayout from '@/components/Layout/EditorLayout'
 import SettingsPanel from '@/components/Settings/SettingsPanel'
 import Sidebar from '@/components/Sidebar/Sidebar'
 import TabBar from '@/components/Tabs/TabBar'
@@ -183,34 +184,23 @@ function AppContent() {
         </button>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar onFileOpen={handleFileOpen} />
-
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {state.openFiles.length > 0 && <TabBar />}
-          
-          <main className="flex-1 overflow-hidden relative">
-            <Editor />
-          </main>
-
-          <SearchPanel 
-            isOpen={showSearch} 
-            onToggle={() => setShowSearch(false)} 
-            rootPath={repoPath}
-          />
-          
-          <GitPanel 
-            isOpen={showGit} 
-            onToggle={() => setShowGit(false)} 
-            repoPath={repoPath}
-          />
-          
-          <Terminal 
-            isOpen={showTerminal} 
-            onToggle={() => setShowTerminal(false)} 
-          />
-        </div>
-      </div>
+      <EditorLayout
+        sidebar={<Sidebar onFileOpen={handleFileOpen} />}
+        editor={
+          <div className="flex-1 flex flex-col overflow-hidden h-full">
+            {state.openFiles.length > 0 && <TabBar />}
+            <main className="flex-1 overflow-hidden relative">
+              <Editor />
+            </main>
+          </div>
+        }
+        terminal={<Terminal isOpen={showTerminal} onToggle={() => setShowTerminal(false)} />}
+        git={<GitPanel isOpen={showGit} onToggle={() => setShowGit(false)} repoPath={repoPath} />}
+        search={<SearchPanel isOpen={showSearch} onToggle={() => setShowSearch(false)} rootPath={repoPath} />}
+        showTerminal={showTerminal}
+        showGit={showGit}
+        showSearch={showSearch}
+      />
 
       <StatusBar />
 

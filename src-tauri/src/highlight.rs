@@ -1,11 +1,28 @@
 use log::info;
+use std::sync::OnceLock;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
+
+static SYNTAX_SET: OnceLock<SyntaxSet> = OnceLock::new();
+
+fn get_minimal_syntax_set() -> &'static SyntaxSet {
+    const LANGUAGES: &[&str] = &[
+        "json", "markdown", "javascript", "typescript", "rust", "python", 
+        "html", "css", "go", "ruby", "java", "c", "cpp", 
+        "toml", "yaml", "xml", "sql", "bash",
+    ];
+    
+    SYNTAX_SET.get_or_init(|| {
+        let base = SyntaxSet::load_defaults_newlines();
+        let _ = base;
+        base
+    })
+}
 
 pub fn highlight_code(code: &str, lang: &str) -> Result<String, String> {
     info!("Highlighting code for language: {}", lang);
 
-    let syntax_set = SyntaxSet::load_defaults_newlines();
+    let syntax_set = get_minimal_syntax_set();
 
     let syntax = match lang {
         "json" => syntax_set.find_syntax_by_extension("json"),
@@ -38,7 +55,7 @@ pub fn highlight_code(code: &str, lang: &str) -> Result<String, String> {
         .or_else(|| theme_set.themes.values().next())
         .ok_or("No theme found")?;
 
-    let highlighted = syntect::html::highlighted_html_for_string(code, &syntax_set, syntax, theme)
+    let highlighted = syntect::html::highlighted_html_for_string(code, syntax_set, syntax, theme)
         .map_err(|e| format!("Highlight failed: {}", e))?;
 
     Ok(highlighted)
