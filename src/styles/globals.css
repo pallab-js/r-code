@@ -3,42 +3,44 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #f2f1ed;
-  --color-text: #26251e;
-  --color-surface: #e6e5e0;
-  --color-surface-100: #f7f7f4;
-  --color-surface-200: #f2f1ed;
-  --color-surface-300: #ebeae5;
-  --color-surface-400: #e6e5e0;
-  --color-surface-500: #e1e0db;
-  --color-border: rgba(38, 37, 30, 0.1);
-  --color-border-strong: rgba(38, 37, 30, 0.55);
-  --color-accent: #f54e00;
-  --color-error: #cf2d56;
-  --color-success: #1f8a65;
-  --color-muted: rgba(38, 37, 30, 0.55);
-  --color-gold: #c08532;
-  --color-thinking: #dfa88f;
-  --color-grep: #9fc9a2;
-  --color-read: #9fbbe0;
-  --color-edit: #c0a8dd;
-}
+  /* Brand - Supabase Green */
+  --color-brand: #3ecf8e;
+  --color-brand-link: #00c573;
+  --color-brand-border: rgba(62, 207, 142, 0.3);
 
-[data-theme="dark"] {
-  --color-bg: #1a1a1a;
-  --color-text: #e8e8e8;
-  --color-surface: #252525;
-  --color-surface-100: #1f1f1f;
-  --color-surface-200: #252525;
-  --color-surface-300: #2d2d2d;
-  --color-surface-400: #363636;
-  --color-surface-500: #404040;
-  --color-border: rgba(232, 232, 232, 0.1);
-  --color-border-strong: rgba(232, 232, 232, 0.25);
-  --color-accent: #ff6b2b;
-  --color-error: #ff4d6d;
-  --color-success: #2dbf8a;
-  --color-muted: rgba(232, 232, 232, 0.55);
+  /* Neutral Scale - Dark Mode Native */
+  --color-near-black: #0f0f0f;
+  --color-dark: #171717;
+  --color-dark-border: #242424;
+  --color-border-dark: #2e2e2e;
+  --color-mid-border: #363636;
+  --color-border-light: #393939;
+  --color-charcoal: #434343;
+  --color-dark-gray: #4d4d4d;
+  --color-mid-gray: #898989;
+  --color-light-gray: #b4b4b4;
+  --color-near-white: #efefef;
+  --color-off-white: #fafafa;
+
+  /* Typography */
+  --color-text: var(--color-off-white);
+  --color-text-secondary: var(--color-light-gray);
+  --color-text-muted: var(--color-mid-gray);
+  --color-bg: var(--color-dark);
+  --color-surface: var(--color-dark);
+  --color-surface-100: var(--color-near-black);
+  --color-surface-200: var(--color-dark);
+  --color-surface-300: var(--color-border-dark);
+  --color-surface-400: var(--color-mid-border);
+  --color-surface-500: var(--color-border-light);
+  --color-border: var(--color-border-dark);
+  --color-border-strong: var(--color-mid-border);
+
+  /* Accent Colors */
+  --color-accent: var(--color-brand);
+  --color-error: #cf2d56;
+  --color-success: #3ecf8e;
+  --color-warning: #d4964a;
   --color-gold: #d4964a;
   --color-thinking: #e8b89e;
   --color-grep: #8dbf8a;
@@ -56,14 +58,14 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Circular', 'custom-font', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
   transition: background-color 150ms ease, color 150ms ease;
 }
 
 ::selection {
-  background-color: rgba(245, 78, 0, 0.2);
+  background-color: rgba(62, 207, 142, 0.3);
 }
 
 /* Surface colors for Tailwind */
@@ -118,11 +120,11 @@ body {
 }
 
 .cm-editor .cm-activeLineGutter {
-  background-color: rgba(245, 78, 0, 0.1) !important;
+  background-color: rgba(62, 207, 142, 0.1) !important;
 }
 
 .cm-editor .cm-activeLine {
-  background-color: rgba(245, 78, 0, 0.05) !important;
+  background-color: rgba(62, 207, 142, 0.05) !important;
 }
 
 .cm-editor .cm-cursor {
@@ -131,11 +133,11 @@ body {
 
 .cm-editor .cm-selectionBackground,
 .cm-editor .cm-content ::selection {
-  background-color: rgba(245, 78, 0, 0.2) !important;
+  background-color: rgba(62, 207, 142, 0.3) !important;
 }
 
 .cm-editor.cm-focused .cm-selectionBackground {
-  background-color: rgba(245, 78, 0, 0.2) !important;
+  background-color: rgba(62, 207, 142, 0.3) !important;
 }
 
 .cm-editor .cm-line {
@@ -143,7 +145,7 @@ body {
 }
 
 .cm-editor .cm-matchingBracket {
-  background-color: rgba(245, 78, 0, 0.3);
+  background-color: rgba(62, 207, 142, 0.3);
   color: inherit !important;
 }
 
@@ -171,14 +173,14 @@ body {
 .syntax-highlight .tok-variableName { color: #26251e; }
 .syntax-highlight .tok-propertyName { color: #dfa88f; }
 
-/* Syntax highlighting - Dark theme */
-[data-theme="dark"] .syntax-highlight .tok-keyword { color: #ff6b2b; }
-[data-theme="dark"] .syntax-highlight .tok-string { color: #2dbf8a; }
+/* Syntax highlighting - Dark theme (Supabase-inspired) */
+[data-theme="dark"] .syntax-highlight .tok-keyword { color: #3ecf8e; }
+[data-theme="dark"] .syntax-highlight .tok-string { color: #00c573; }
 [data-theme="dark"] .syntax-highlight .tok-number { color: #d4964a; }
-[data-theme="dark"] .syntax-highlight .tok-comment { color: rgba(232, 232, 232, 0.55); font-style: italic; }
+[data-theme="dark"] .syntax-highlight .tok-comment { color: #898989; font-style: italic; }
 [data-theme="dark"] .syntax-highlight .tok-type { color: #8eb8e8; }
 [data-theme="dark"] .syntax-highlight .tok-function { color: #b88de8; }
-[data-theme="dark"] .syntax-highlight .tok-variableName { color: #e8e8e8; }
+[data-theme="dark"] .syntax-highlight .tok-variableName { color: #fafafa; }
 [data-theme="dark"] .syntax-highlight .tok-propertyName { color: #e8b89e; }
 
 /* Scrollbars */
@@ -205,13 +207,14 @@ button, a, input, select, textarea {
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
-/* Focus states */
+/* Focus states - Supabase style: minimal shadow */
 *:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+  border-color: var(--color-brand);
 }
 
 /* Button hover */
 button:hover {
-  color: var(--color-error);
+  border-color: var(--color-brand);
 }

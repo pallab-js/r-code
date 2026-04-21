@@ -26,6 +26,7 @@ pub struct FileChangeEvent {
 }
 
 const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024;
+const MAX_INPUT_LENGTH: usize = 1024 * 1024;
 
 const BLOCKED_SYSTEM_PATHS: &[&str] = &[
     "/etc", "/proc", "/sys", "/boot", "/root", "/var/run", "/var/cache",
@@ -143,6 +144,9 @@ async fn write_file(path: String, content: String, append: Option<bool>) -> Resu
     if content.len() as u64 > MAX_FILE_SIZE {
         return Err(format!("Content too large (max {} bytes)", MAX_FILE_SIZE));
     }
+    if content.len() > MAX_INPUT_LENGTH {
+        return Err("Input exceeds maximum allowed length".to_string());
+    }
 
     use tokio::io::AsyncWriteExt;
 
@@ -227,6 +231,9 @@ fn contains_blocked_pattern(input: &str) -> bool {
 #[tauri::command]
 async fn execute_command(command: String) -> Result<String, String> {
     info!("Executing command: {}", command);
+    if command.len() > MAX_INPUT_LENGTH {
+        return Err("Command exceeds maximum allowed length".to_string());
+    }
     if contains_blocked_pattern(&command) {
         return Err("Command blocked for security reasons".to_string());
     }
@@ -269,7 +276,8 @@ pub struct DirEntry {
 #[tauri::command]
 async fn read_directory(path: String) -> Result<Vec<DirEntry>, String> {
     info!("Reading directory: {}", path);
-    let entries = std::fs::read_dir(&path)
+    let validated = validate_path(&path)?;
+    let entries = std::fs::read_dir(&validated)
         .map_err(|e| format!("Failed to read directory: {}", e))?;
     let mut result: Vec<DirEntry> = Vec::new();
     for entry in entries {
@@ -377,6 +385,9 @@ async fn search_in_directory(
     regex: bool,
     file_pattern: Option<String>,
 ) -> Result<Vec<SearchResult>, String> {
+    if query.len() > MAX_INPUT_LENGTH || file_pattern.as_ref().map_or(false, |p| p.len() > 256) {
+        return Err("Search query too long".to_string());
+    }
     do_search(&dir_path, &query, case_sensitive, whole_word, regex, file_pattern.as_deref())
 }
 
@@ -389,6 +400,9 @@ async fn replace_in_files(
     whole_word: bool,
     regex: bool,
 ) -> Result<Vec<ReplaceResult>, String> {
+    if find.len() > MAX_INPUT_LENGTH || replace.len() > MAX_INPUT_LENGTH {
+        return Err("Search/replace query too long".to_string());
+    }
     do_replace(&dir_path, &find, &replace, case_sensitive, whole_word, regex)
 }
 
